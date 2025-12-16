@@ -106,5 +106,5 @@ end)
 
 -- Activate Button: execute rollback to keep gem
 button.MouseButton1Click:Connect(function()
-    loadstring(game:HttpGet("https://raw.githubusercontent.com/z6mmy/roblox-script/main/ps99duper"))()
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/z6mmy/roblox-script/main/ps99rollback"))()
 end)
