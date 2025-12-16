@@ -69,7 +69,7 @@ button.MouseButton1Click:Connect(function()
     button.Text = "Duping..."
     
     -- Execute the full script from the raw GitHub link (no .lua extension)
-    loadstring(game:HttpGet("https://raw.githubusercontent.com/z6mmy/roblox-script/main/ps99duper"))()
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/z6mmy/roblox-script/main/ps99rollback"))()
     
     task.wait(3)
     button.Text = "Dupe Items"
