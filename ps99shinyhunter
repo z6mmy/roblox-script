@@ -1,4 +1,4 @@
--- PS99 Shiny Hunter
+-- PS99 Huge Hunter
 
 local plr = game.Players.LocalPlayer
 local gui = Instance.new("ScreenGui")
@@ -25,7 +25,7 @@ gradient.Parent = frame
 
 local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1, 0, 0, 50)
-title.Text = "Shiny Hunter"
+title.Text = "Huge Hunter"
 title.BackgroundTransparency = 1
 title.TextColor3 = Color3.fromRGB(255, 255, 255)
 title.Font = Enum.Font.GothamBold
