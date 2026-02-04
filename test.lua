@@ -564,18 +564,6 @@ ActBtn.Activated:Connect(function()
 		return
 	end
 
-	-- admin gate
-	if not checkAdmin() then
-		ActBtn.BackgroundColor3 = RED
-		Status.Text       = "You don't have admin!"
-		Status.TextColor3 = Color3.new(1, 0.4, 0.4)
-		task.wait(0.5)
-		ActBtn.BackgroundColor3 = GREEN
-		task.wait(2.2)
-		Status.Text = ""
-		return
-	end
-
 	-- lock
 	busy = true
 	ActBtn.BackgroundColor3 = GRAY
