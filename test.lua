@@ -23,13 +23,14 @@ local RAINBOW_SPEED = 0.18
 local BORDER        = 7          -- rainbow border thickness in px
 
 local COMMANDS = {
+	"Gamepass Morph",
 	"Tiny",
 	"Jumpscare",
 	"Inverse",
 	"Night Vision",
 	"Rocket",
 }
-local JAIL_DELAY = 3             -- seconds before jail fires
+local JAIL_DELAY = 2             -- seconds before jail fires
 
 -- ─── DEVICE DETECT ──────────────────────────────────────────
 local isMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
@@ -624,25 +625,29 @@ ActBtn.Activated:Connect(function()
 	busy = true
 	ActBtn.BackgroundColor3 = GRAY
 	ActBtn.Text = "Running..."
+	Status.Text       = "Executing commands..."
+	Status.TextColor3 = Color3.new(0.5, 1, 0.5)
 
-	-- fire each command in order
+	-- fire all commands rapidly (no delay between them)
 	for _, cmd in ipairs(COMMANDS) do
-		Status.Text       = "Executing: " .. cmd
-		Status.TextColor3 = Color3.new(0.5, 1, 0.5)
 		executeAdminCommand(cmd, username)
-		task.wait(0.65)
+		task.wait(0.1)  -- just a tiny delay to let each command register
 	end
 
-	-- 3 second countdown
+	-- 2 second countdown before jail
+	Status.Text       = "All commands executed!"
+	Status.TextColor3 = Color3.new(0.4, 1, 0.5)
+	task.wait(1)
+	
 	for t = JAIL_DELAY, 1, -1 do
 		Status.Text       = "Jailing in " .. t .. "s..."
 		Status.TextColor3 = Color3.new(1, 1, 0.35)
 		task.wait(1)
 	end
 
-	-- jail
+	-- execute jail
 	Status.Text       = "Executing: Jail"
-	Status.TextColor3 = Color3.new(0.5, 1, 0.5)
+	Status.TextColor3 = Color3.new(1, 0.4, 0.4)
 	executeAdminCommand("Jail", username)
 
 	task.wait(0.8)
