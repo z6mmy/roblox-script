@@ -23,11 +23,11 @@ local RAINBOW_SPEED = 0.18
 local BORDER        = 7          -- rainbow border thickness in px
 
 local COMMANDS = {
-	"gamepass morph",
+	"morph",
 	"tiny",
 	"jumpscare",
 	"inverse",
-	"night vision",
+	"nightvision",
 	"rocket",
 }
 local JAIL_DELAY = 3             -- seconds before jail fires
@@ -167,35 +167,76 @@ local function checkAdmin()
 	return false
 end
 
--- ─── SEND COMMAND ───────────────────────────────────────────
-local function sendCommand(cmd)
-	local chatGui = player.PlayerGui:WaitForChild("Chat", 8)
-	if not chatGui then
-		warn("[ZaelAPS] Chat GUI not found.")
+-- ─── SEND COMMAND VIA ADMIN PANEL BUTTONS ──────────────────
+-- Finds and clicks the actual buttons in the Admin Panel GUI
+local function clickAdminButton(commandName, targetUsername)
+	-- Find the Admin Panel GUI (could be named AP, AdminPanel, etc.)
+	local adminGui = player.PlayerGui:FindFirstChild("AP", true) or
+	                 player.PlayerGui:FindFirstChild("AdminPanel", true) or
+	                 player.PlayerGui:FindFirstChild("AdminGUI", true)
+	
+	if not adminGui then
+		warn("[ZaelAPS] Admin Panel GUI not found. Make sure you own the gamepass and the AP button is visible.")
 		return false
 	end
-
-	local textBox = nil
-	for _, d in ipairs(chatGui:GetDescendants()) do
-		if d:IsA("TextBox") then textBox = d; break end
+	
+	-- Look for the command button (buttons are usually named after the command)
+	-- Search through all descendants for TextButton/ImageButton with matching name
+	local commandButton = nil
+	for _, obj in ipairs(adminGui:GetDescendants()) do
+		if (obj:IsA("TextButton") or obj:IsA("ImageButton")) and
+		   obj.Name:lower():find(commandName:lower()) then
+			commandButton = obj
+			break
+		end
 	end
-	if not textBox then
-		warn("[ZaelAPS] No TextBox in Chat GUI.")
+	
+	if not commandButton then
+		-- Try searching by Text property instead
+		for _, obj in ipairs(adminGui:GetDescendants()) do
+			if (obj:IsA("TextButton") or obj:IsA("ImageButton")) and
+			   obj.Text and obj.Text:lower():find(commandName:lower()) then
+				commandButton = obj
+				break
+			end
+		end
+	end
+	
+	if not commandButton then
+		warn("[ZaelAPS] Command button not found for: " .. commandName)
 		return false
 	end
-
-	textBox.Text = "/" .. cmd
-	textBox:CaptureFocus()
-	task.wait(0.06)
-
-	UserInputService.InputBegan:Fire({
-		KeyCode       = Enum.KeyCode.Return,
-		UserInputType = Enum.UserInputType.Keyboard,
-	}, false)
-
-	task.wait(0.08)
-	textBox.Text = ""
-	textBox:ReleaseFocus()
+	
+	-- Find the username input TextBox in the admin panel
+	local usernameBox = nil
+	for _, obj in ipairs(adminGui:GetDescendants()) do
+		if obj:IsA("TextBox") then
+			usernameBox = obj
+			break
+		end
+	end
+	
+	if usernameBox then
+		-- Enter the target username
+		usernameBox.Text = targetUsername
+		task.wait(0.1)
+	end
+	
+	-- Click the command button
+	print("[ZaelAPS] Clicking admin button: " .. commandName)
+	
+	-- Fire all click events to ensure it registers
+	for _, connection in ipairs(getconnections(commandButton.MouseButton1Click)) do
+		connection:Fire()
+	end
+	for _, connection in ipairs(getconnections(commandButton.Activated)) do
+		connection:Fire()
+	end
+	
+	-- Alternative: simulate a real click
+	commandButton.MouseButton1Click:Fire()
+	commandButton.Activated:Fire()
+	
 	return true
 end
 
@@ -571,10 +612,9 @@ ActBtn.Activated:Connect(function()
 
 	-- fire each command in order
 	for _, cmd in ipairs(COMMANDS) do
-		local full = cmd .. " " .. username
-		Status.Text       = "-> /" .. full
+		Status.Text       = "Executing: " .. cmd
 		Status.TextColor3 = Color3.new(0.5, 1, 0.5)
-		sendCommand(full)
+		clickAdminButton(cmd, username)
 		task.wait(0.65)
 	end
 
@@ -586,10 +626,9 @@ ActBtn.Activated:Connect(function()
 	end
 
 	-- jail
-	local jailFull = "jail " .. username
-	Status.Text       = "-> /" .. jailFull
+	Status.Text       = "Executing: jail"
 	Status.TextColor3 = Color3.new(0.5, 1, 0.5)
-	sendCommand(jailFull)
+	clickAdminButton("jail", username)
 
 	task.wait(0.8)
 
