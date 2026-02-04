@@ -23,12 +23,11 @@ local RAINBOW_SPEED = 0.18
 local BORDER        = 7          -- rainbow border thickness in px
 
 local COMMANDS = {
-	"morph",
-	"tiny",
-	"jumpscare",
-	"inverse",
-	"nightvision",
-	"rocket",
+	"Tiny",
+	"Jumpscare",
+	"Inverse",
+	"Night Vision",
+	"Rocket",
 }
 local JAIL_DELAY = 3             -- seconds before jail fires
 
@@ -167,35 +166,50 @@ local function checkAdmin()
 	return false
 end
 
--- ─── SEND COMMAND VIA ADMIN PANEL BUTTONS ──────────────────
--- Finds and clicks the actual buttons in the Admin Panel GUI
-local function clickAdminButton(commandName, targetUsername)
-	-- Find the Admin Panel GUI (could be named AP, AdminPanel, etc.)
+-- ─── EXECUTE ADMIN COMMAND VIA REMOTES ─────────────────────
+-- Finds and fires the RemoteEvent/RemoteFunction that admin commands use
+local function executeAdminCommand(commandName, targetUsername)
+	print("[ZaelAPS] Executing: " .. commandName .. " on " .. targetUsername)
+	
+	-- The admin panel uses RemoteEvents to send commands to the server
+	-- Common locations: ReplicatedStorage, game.Players.LocalPlayer
+	local ReplicatedStorage = game:GetService("ReplicatedStorage")
+	
+	-- Try to find the admin remote (common names)
+	local adminRemote = ReplicatedStorage:FindFirstChild("AdminRemote", true) or
+	                    ReplicatedStorage:FindFirstChild("AdminEvent", true) or
+	                    ReplicatedStorage:FindFirstChild("CommandRemote", true) or
+	                    ReplicatedStorage:FindFirstChild("AdminCommand", true)
+	
+	if adminRemote then
+		if adminRemote:IsA("RemoteEvent") then
+			-- Fire with command and target
+			adminRemote:FireServer(commandName, targetUsername)
+			adminRemote:FireServer({Command = commandName, Target = targetUsername})
+			adminRemote:FireServer(commandName:lower(), targetUsername)
+		elseif adminRemote:IsA("RemoteFunction") then
+			adminRemote:InvokeServer(commandName, targetUsername)
+		end
+		return true
+	end
+	
+	-- Alternative: Find the admin panel GUI and hook into its button connections
 	local adminGui = player.PlayerGui:FindFirstChild("AP", true) or
-	                 player.PlayerGui:FindFirstChild("AdminPanel", true) or
-	                 player.PlayerGui:FindFirstChild("AdminGUI", true)
+	                 player.PlayerGui:FindFirstChild("AdminPanel", true)
 	
 	if not adminGui then
-		warn("[ZaelAPS] Admin Panel GUI not found. Make sure you own the gamepass and the AP button is visible.")
+		warn("[ZaelAPS] Admin panel not found. Please open the admin panel (AP button) first.")
 		return false
 	end
 	
-	-- Look for the command button (buttons are usually named after the command)
-	-- Search through all descendants for TextButton/ImageButton with matching name
+	-- Find the command button by searching all descendants
 	local commandButton = nil
 	for _, obj in ipairs(adminGui:GetDescendants()) do
-		if (obj:IsA("TextButton") or obj:IsA("ImageButton")) and
-		   obj.Name:lower():find(commandName:lower()) then
-			commandButton = obj
-			break
-		end
-	end
-	
-	if not commandButton then
-		-- Try searching by Text property instead
-		for _, obj in ipairs(adminGui:GetDescendants()) do
-			if (obj:IsA("TextButton") or obj:IsA("ImageButton")) and
-			   obj.Text and obj.Text:lower():find(commandName:lower()) then
+		if obj:IsA("TextButton") or obj:IsA("ImageButton") then
+			local objText = obj.Text:lower()
+			local objName = obj.Name:lower()
+			
+			if objText:find(commandName:lower()) or objName:find(commandName:lower()) then
 				commandButton = obj
 				break
 			end
@@ -203,39 +217,40 @@ local function clickAdminButton(commandName, targetUsername)
 	end
 	
 	if not commandButton then
-		warn("[ZaelAPS] Command button not found for: " .. commandName)
+		warn("[ZaelAPS] Button not found for command: " .. commandName)
 		return false
 	end
 	
-	-- Find the username input TextBox in the admin panel
-	local usernameBox = nil
+	-- Find and set the username TextBox
 	for _, obj in ipairs(adminGui:GetDescendants()) do
-		if obj:IsA("TextBox") then
-			usernameBox = obj
+		if obj:IsA("TextBox") and (obj.PlaceholderText:lower():find("user") or obj.PlaceholderText:lower():find("player")) then
+			obj.Text = targetUsername
+			task.wait(0.05)
 			break
 		end
 	end
 	
-	if usernameBox then
-		-- Enter the target username
-		usernameBox.Text = targetUsername
-		task.wait(0.1)
-	end
+	-- Method 1: Get the actual click connections and fire them
+	local clicked = false
+	pcall(function()
+		for _, connection in pairs(getconnections(commandButton.MouseButton1Click)) do
+			connection:Fire()
+			clicked = true
+		end
+	end)
 	
-	-- Click the command button
-	print("[ZaelAPS] Clicking admin button: " .. commandName)
+	pcall(function()
+		for _, connection in pairs(getconnections(commandButton.Activated)) do
+			connection:Fire()
+			clicked = true
+		end
+	end)
 	
-	-- Fire all click events to ensure it registers
-	for _, connection in ipairs(getconnections(commandButton.MouseButton1Click)) do
-		connection:Fire()
+	-- Method 2: Simulate actual mouse click
+	if not clicked then
+		commandButton.MouseButton1Click:Fire()
+		commandButton.Activated:Fire()
 	end
-	for _, connection in ipairs(getconnections(commandButton.Activated)) do
-		connection:Fire()
-	end
-	
-	-- Alternative: simulate a real click
-	commandButton.MouseButton1Click:Fire()
-	commandButton.Activated:Fire()
 	
 	return true
 end
@@ -614,7 +629,7 @@ ActBtn.Activated:Connect(function()
 	for _, cmd in ipairs(COMMANDS) do
 		Status.Text       = "Executing: " .. cmd
 		Status.TextColor3 = Color3.new(0.5, 1, 0.5)
-		clickAdminButton(cmd, username)
+		executeAdminCommand(cmd, username)
 		task.wait(0.65)
 	end
 
@@ -626,9 +641,9 @@ ActBtn.Activated:Connect(function()
 	end
 
 	-- jail
-	Status.Text       = "Executing: jail"
+	Status.Text       = "Executing: Jail"
 	Status.TextColor3 = Color3.new(0.5, 1, 0.5)
-	clickAdminButton("jail", username)
+	executeAdminCommand("Jail", username)
 
 	task.wait(0.8)
 
