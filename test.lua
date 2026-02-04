@@ -12,6 +12,13 @@ local player    = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
 -- ─── CONFIG ─────────────────────────────────────────────────
+-- TO FIND THE ADMIN PANEL GAMEPASS ID:
+-- 1) In Steal a Brainrot, open the in-game store/shop
+-- 2) Look for "Admin Panel" or similar gamepass
+-- 3) The ID is in the URL or you can check Developer Console (F9)
+--    while clicking the gamepass purchase button
+-- 4) Replace ADMIN_GAMEPASS_ID in checkAdmin() function below
+
 local RAINBOW_SPEED = 0.18
 local BORDER        = 7          -- rainbow border thickness in px
 
@@ -32,14 +39,14 @@ local isMobile = UserInputService.TouchEnabled and not UserInputService.Keyboard
 -- Mobile card height is calculated exactly:
 --   PAD_V*2 + TITLE + STATUS + INPUT + BTN + GAP*3 + BORDER*2 = 232
 local CARD_W_PX   = isMobile and 260  or 300
-local CARD_H_PX   = isMobile and 248  or 340
+local CARD_H_PX   = isMobile and 280  or 360
 
 -- Heights of each element inside the card (pixels)
 local PAD_V       = isMobile and 14   or 28    -- top + bottom padding each
 local PAD_H       = isMobile and 18   or 24    -- left + right padding each
 local TITLE_H     = isMobile and 48   or 72
 local STATUS_H    = isMobile and 18   or 24
-local INPUT_H     = isMobile and 46   or 58
+local INPUT_H     = isMobile and 72   or 90    -- taller for scrolling player list
 local BTN_H       = isMobile and 48   or 60
 local GAP         = isMobile and 10   or 14    -- vertical gap between items
 
@@ -61,38 +68,102 @@ local function hsvToRgb(h, s, v)
 	end
 end
 
--- ─── ADMIN CHECK ────────────────────────────────────────────
+-- ─── ADMIN CHECK (Steal a Brainrot Admin Panel Gamepass) ───
+-- Checks if player owns the Admin Panel gamepass
 local function checkAdmin()
-	local rep = game:GetService("ReplicatedStorage")
-
-	if player:GetAttribute("IsAdmin") == true then return true end
-	if player:GetAttribute("Admin")   == true then return true end
-
-	local av = player:FindFirstChild("Admin", true)
-	if av then
-		if av:IsA("BoolValue")   and av.Value == true  then return true end
-		if av:IsA("StringValue") and av.Value ~= ""    then return true end
+	local MarketplaceService = game:GetService("MarketplaceService")
+	
+	print("[ZaelAPS] Checking admin status...")
+	
+	-- Method 1: Direct gamepass check (most reliable if you know the ID)
+	-- Find the gamepass ID by opening the game store or checking dev console
+	local ADMIN_GAMEPASS_ID = nil  -- Replace with actual gamepass ID when known
+	
+	if ADMIN_GAMEPASS_ID then
+		local success, hasPass = pcall(function()
+			return MarketplaceService:UserOwnsGamePassAsync(player.UserId, ADMIN_GAMEPASS_ID)
+		end)
+		if success and hasPass then
+			print("[ZaelAPS] ✓ Admin detected via gamepass ID")
+			return true
+		end
 	end
-
-	local folder = rep:FindFirstChild("Admins", true)
-	if folder and folder:FindFirstChild(player.Name) then return true end
-
-	local mod = rep:FindFirstChild("AdminList", true)
-	if mod and mod:IsA("ModuleScript") then
-		local ok, list = pcall(require, mod)
-		if ok and type(list) == "table" then
-			for _, name in ipairs(list) do
-				if tostring(name):lower() == player.Name:lower() then return true end
+	
+	-- Method 2: Check for attributes the gamepass sets
+	if player:GetAttribute("AdminPanel") == true then
+		print("[ZaelAPS] ✓ Admin detected via AdminPanel attribute")
+		return true
+	end
+	if player:GetAttribute("HasAdminPanel") == true then
+		print("[ZaelAPS] ✓ Admin detected via HasAdminPanel attribute")
+		return true
+	end
+	if player:GetAttribute("AdminGamepass") == true then
+		print("[ZaelAPS] ✓ Admin detected via AdminGamepass attribute")
+		return true
+	end
+	
+	-- Method 3: Check for values the gamepass creates
+	local adminVal = player:FindFirstChild("AdminPanel", true) or
+	                 player:FindFirstChild("AdminGamepass", true)
+	if adminVal then
+		if adminVal:IsA("BoolValue") and adminVal.Value == true then
+			print("[ZaelAPS] ✓ Admin detected via BoolValue: " .. adminVal.Name)
+			return true
+		end
+		if adminVal:IsA("StringValue") and adminVal.Value ~= "" then
+			print("[ZaelAPS] ✓ Admin detected via StringValue: " .. adminVal.Name)
+			return true
+		end
+	end
+	
+	-- Method 4: Check Backpack/StarterGear for admin tool
+	local function hasAdminTool(container)
+		for _, tool in ipairs(container:GetChildren()) do
+			if tool:IsA("Tool") and (
+				tool.Name:lower():find("admin") or 
+				tool.Name:lower():find("panel") or
+				tool.Name:lower():find("command")
+			) then
+				return true, tool.Name
 			end
 		end
+		return false
 	end
-
-	if _G["Admins"] and type(_G["Admins"]) == "table" then
-		for _, v in ipairs(_G["Admins"]) do
-			if tostring(v):lower() == player.Name:lower() then return true end
-		end
+	
+	local hasBackpack, toolName = hasAdminTool(player.Backpack)
+	if hasBackpack then
+		print("[ZaelAPS] ✓ Admin detected via Backpack tool: " .. toolName)
+		return true
 	end
-
+	
+	local hasStarter, toolName2 = hasAdminTool(player.StarterGear)
+	if hasStarter then
+		print("[ZaelAPS] ✓ Admin detected via StarterGear tool: " .. toolName2)
+		return true
+	end
+	
+	-- Method 5: Check PlayerGui for admin GUI
+	local adminGui = player.PlayerGui:FindFirstChild("AdminPanel", true) or
+	                 player.PlayerGui:FindFirstChild("AdminGUI", true) or
+	                 player.PlayerGui:FindFirstChild("CommandPanel", true)
+	if adminGui then
+		print("[ZaelAPS] ✓ Admin detected via PlayerGui: " .. adminGui.Name)
+		return true
+	end
+	
+	-- Debug: List what we found
+	print("[ZaelAPS] ✗ No admin access detected")
+	print("[ZaelAPS] Player attributes:", player:GetAttributes())
+	print("[ZaelAPS] Backpack tools:")
+	for _, v in ipairs(player.Backpack:GetChildren()) do
+		if v:IsA("Tool") then print("  -", v.Name) end
+	end
+	print("[ZaelAPS] PlayerGui children:")
+	for _, v in ipairs(player.PlayerGui:GetChildren()) do
+		print("  -", v.Name)
+	end
+	
 	return false
 end
 
@@ -243,7 +314,7 @@ do
 	c.Parent      = Status
 end
 
--- ── INPUT (order 3) ─────────────────────────────────────────
+-- ── INPUT (order 3) – ScrollingFrame with player list ───────
 local InputOuter = Instance.new("Frame")
 InputOuter.Name            = "InputOuter"
 InputOuter.Size            = UDim2.new(1, 0, 0, INPUT_H)
@@ -264,33 +335,110 @@ InputInner.Parent          = InputOuter
 
 Instance.new("UICorner", InputInner).CornerRadius = UDim.new(0, 7)
 
-local TextBox = Instance.new("TextBox")
-TextBox.Name                  = "TextBox"
-TextBox.Size                  = UDim2.new(1, 0, 1, 0)
-TextBox.BackgroundTransparency = 1
-TextBox.Text                  = ""
-TextBox.PlaceholderText       = "type user here"
-TextBox.TextColor3            = Color3.new(1, 1, 1)
-TextBox.PlaceholderColor3     = Color3.new(0.6, 0.6, 0.6)
-TextBox.TextScaled            = true
-TextBox.Font                  = Enum.Font.GothamBold
-TextBox.TextXAlignment        = Enum.TextXAlignment.Center
-TextBox.TextYAlignment        = Enum.TextYAlignment.Center
-TextBox.ClearTextOnFocus      = false
-TextBox.Parent                = InputInner
+-- ScrollingFrame to hold player buttons
+local PlayerScroll = Instance.new("ScrollingFrame")
+PlayerScroll.Name                   = "PlayerScroll"
+PlayerScroll.Size                   = UDim2.new(1, 0, 1, 0)
+PlayerScroll.BackgroundTransparency = 1
+PlayerScroll.BorderSizePixel        = 0
+PlayerScroll.ScrollBarThickness     = 4
+PlayerScroll.ScrollBarImageColor3   = Color3.new(0.6, 0.6, 0.6)
+PlayerScroll.CanvasSize             = UDim2.new(0, 0, 0, 0)  -- auto-updated
+PlayerScroll.Parent                 = InputInner
 
-do
-	local c = Instance.new("UITextSizeConstraint")
-	c.MinTextSize = 12
-	c.MaxTextSize = 22
-	c.Parent      = TextBox
+local scrollList = Instance.new("UIListLayout")
+scrollList.SortOrder         = Enum.SortOrder.Name
+scrollList.Padding           = UDim.new(0, 2)
+scrollList.FillDirection     = Enum.FillDirection.Vertical
+scrollList.HorizontalAlignment = Enum.HorizontalAlignment.Center
+scrollList.Parent            = PlayerScroll
+
+-- Auto-resize canvas
+scrollList:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+	PlayerScroll.CanvasSize = UDim2.new(0, 0, 0, scrollList.AbsoluteContentSize.Y + 4)
+end)
+
+-- Padding inside scroll
+local scrollPad = Instance.new("UIPadding")
+scrollPad.PaddingLeft  = UDim.new(0, 6)
+scrollPad.PaddingRight = UDim.new(0, 6)
+scrollPad.PaddingTop   = UDim.new(0, 4)
+scrollPad.PaddingBottom = UDim.new(0, 4)
+scrollPad.Parent       = PlayerScroll
+
+-- Variable to track selected player
+local selectedPlayer = nil
+
+-- Function to create a player button
+local function createPlayerButton(plr)
+	local btn = Instance.new("TextButton")
+	btn.Name             = plr.Name
+	btn.Size             = UDim2.new(1, -8, 0, 24)
+	btn.BackgroundColor3 = Color3.new(0.12, 0.12, 0.12)
+	btn.BorderSizePixel  = 0
+	btn.Text             = plr.Name
+	btn.TextColor3       = Color3.new(1, 1, 1)
+	btn.TextScaled       = true
+	btn.Font             = Enum.Font.GothamBold
+	btn.TextXAlignment   = Enum.TextXAlignment.Center
+	btn.Parent           = PlayerScroll
+	
+	Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+	
+	local tc = Instance.new("UITextSizeConstraint")
+	tc.MinTextSize = 10
+	tc.MaxTextSize = 16
+	tc.Parent      = btn
+	
+	-- Click to select
+	btn.Activated:Connect(function()
+		selectedPlayer = plr.Name
+		-- Highlight selected button
+		for _, child in ipairs(PlayerScroll:GetChildren()) do
+			if child:IsA("TextButton") then
+				if child.Name == plr.Name then
+					child.BackgroundColor3 = Color3.new(0.18, 0.80, 0.31)  -- green
+				else
+					child.BackgroundColor3 = Color3.new(0.12, 0.12, 0.12)  -- dark
+				end
+			end
+		end
+	end)
+	
+	return btn
 end
-do
-	local p = Instance.new("UIPadding")
-	p.PaddingLeft  = UDim.new(0, 10)
-	p.PaddingRight = UDim.new(0, 10)
-	p.Parent       = TextBox
+
+-- Populate player list
+local function refreshPlayerList()
+	-- Clear existing buttons
+	for _, child in ipairs(PlayerScroll:GetChildren()) do
+		if child:IsA("TextButton") then
+			child:Destroy()
+		end
+	end
+	
+	-- Add all players
+	for _, plr in ipairs(Players:GetPlayers()) do
+		createPlayerButton(plr)
+	end
 end
+
+-- Initial populate
+refreshPlayerList()
+
+-- Update when players join/leave
+Players.PlayerAdded:Connect(function(plr)
+	task.wait(0.1)
+	refreshPlayerList()
+end)
+
+Players.PlayerRemoving:Connect(function(plr)
+	if selectedPlayer == plr.Name then
+		selectedPlayer = nil
+	end
+	task.wait(0.1)
+	refreshPlayerList()
+end)
 
 -- ── ACTIVATE BUTTON (order 4) ───────────────────────────────
 local ActBtn = Instance.new("TextButton")
@@ -404,10 +552,10 @@ local busy = false
 ActBtn.Activated:Connect(function()
 	if busy then return end
 
-	local username = TextBox.Text:match("^%s*(.-)%s*$")
-	if username == "" then
+	local username = selectedPlayer
+	if not username or username == "" then
 		ActBtn.BackgroundColor3 = RED
-		Status.Text       = "Enter a username!"
+		Status.Text       = "Select a player!"
 		Status.TextColor3 = Color3.new(1, 0.45, 0.45)
 		task.wait(0.5)
 		ActBtn.BackgroundColor3 = GREEN
